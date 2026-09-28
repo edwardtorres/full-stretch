@@ -198,11 +198,11 @@ Hold results cap elapsed time at the prescription, including on late background 
 
 ## 14. npm test result
 
-`npm test` — **PASS**, 2 test files, 34 tests. Final run duration: 143 ms.
+`npm test` — **PASS**, 2 test files, 34 tests. Final standalone-folder run duration: 213 ms.
 
 ## 15. npm run build result
 
-`npm run build` — **PASS** (TypeScript + Vite). Vite built 2,149 modules in 1.75 seconds.
+`npm run build` — **PASS** (TypeScript + Vite). Vite built 2,149 modules in 1.66 seconds.
 
 `npm run typecheck` — **PASS** (`tsc --noEmit`).
 
@@ -262,6 +262,12 @@ Browser: Codex in-app browser; local development app and a separate, ignored QA-
 | Keyboard | Enter selected Biceps and opened its stretch. Tab navigated the menu; Escape dismissed it and restored focus to Open menu. |
 | Reload behavior | Reload returned completion to 0/13 and removed the active session, as specified. |
 | Console | No warning/error application logs captured on the normal or QA pages. |
+
+## Final delivery verification
+
+The final checks were rerun from `/Users/edwardtorres/Desktop/FullStretch`: 34 tests passed, production build passed, TypeScript passed, and the preview responded with HTTP 200 on port 5174. The project has its own `main` branch and no remote; it was not published or deployed.
+
+During transfer from the temporary build workspace, copying dependency executable links flattened their symlinks. This affected local npm commands only and was resolved by reinstalling the lockfile with `npm ci`. The final project has independent, correctly linked dependencies. Generated dependencies/build output and QA files are absent from tracked source.
 
 ## Scope boundary
 

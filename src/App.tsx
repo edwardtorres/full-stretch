@@ -1,59 +1,63 @@
-import { useCallback, useRef, useState } from 'react'
-import { ArrowRight, Check, Menu as MenuIcon, MoveUpRight } from 'lucide-react'
-import { BodyMap } from './components/BodyMap'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Menu as MenuIcon, MoveUpRight } from 'lucide-react'
 import { Menu } from './components/Menu'
-import { StretchGuide } from './components/StretchGuide'
+import type { Destination } from './components/Menu'
+import { Dashboard } from './components/Dashboard'
 import { SessionPage } from './components/session/SessionPage'
-import { regionGroups, regions } from './data/regions'
-import { fullBodySequence, plannedHoldSeconds, prescription, stretchesForRegion } from './lib/stretch'
-import type { BodyView, RegionId } from './types/stretch'
+import { Onboarding } from './components/profile/Onboarding'
+import { BaselinePage } from './components/profile/BaselinePage'
+import { SettingsPage } from './components/profile/SettingsPage'
+import { ProgressPage } from './components/progress/ProgressPage'
+import { HistoryDetail } from './components/progress/HistoryDetail'
+import { ConfirmDialog } from './components/ConfirmDialog'
+import { useStretchStore } from './hooks/useStretchStore'
+import { todayCompletedStretchIds, todayCoveredRegions } from './lib/history'
+import { localDayKey } from './lib/dates'
+import type { SessionState } from './lib/session'
 export default function App() {
-  const [selected, setSelected] = useState<RegionId | null>(null)
-  const [view, setView] = useState<BodyView>('front')
-  const [stretchIndex, setStretchIndex] = useState(0)
-  const [completed, setCompleted] = useState<ReadonlySet<RegionId>>(new Set())
-  const [session, setSession] = useState<{ ids: string[]; kind: 'targeted' | 'full-body'; key: number } | null>(null)
+  const store = useStretchStore()
+  const [page, setPage] = useState<Destination | 'session' | 'history-detail'>('dashboard')
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [guideOpen, setGuideOpen] = useState(false)
+  const [pendingStart, setPendingStart] = useState<{ ids: string[]; kind: SessionState['kind'] } | null>(null)
+  const [day, setDay] = useState(() => localDayKey(new Date()))
   const menuButton = useRef<HTMLButtonElement>(null)
-  const selectionTitle = useRef<HTMLHeadingElement>(null)
-  const startButton = useRef<HTMLButtonElement>(null)
-  const choices = selected ? stretchesForRegion(selected) : []
-  const stretch = choices[stretchIndex] ?? choices[0]
-  const select = (id: RegionId) => { setSelected(id); setStretchIndex(0); setGuideOpen(false); setView(regions[id].view) }
-  const closeMenu = () => { setMenuOpen(false); setTimeout(() => menuButton.current?.focus(), 0) }
-  const updateCompleted = useCallback((ids: ReadonlySet<RegionId>) => {
-    setCompleted(previous => [...ids].every(id => previous.has(id)) ? previous : new Set([...previous, ...ids]))
+  useEffect(() => {
+    const refresh = () => setDay(localDayKey(new Date()))
+    const interval = setInterval(refresh, 60000)
+    document.addEventListener('visibilitychange', refresh)
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', refresh) }
   }, [])
-  const exit = () => { setSession(null); setTimeout(() => startButton.current?.focus(), 0) }
-  const start = (kind: 'targeted' | 'full-body') => {
-    const ids = kind === 'full-body' ? fullBodySequence().map(item => item.id) : stretch ? [stretch.id] : []
-    if (ids.length) { setSession({ ids, kind, key: Date.now() }); window.scrollTo({ top: 0 }) }
+  const completed = useMemo(() => todayCoveredRegions(store.history, new Date()), [store.history, day])
+  const completeIds = useMemo(() => todayCompletedStretchIds(store.history, new Date()), [store.history, day])
+  const closeMenu = () => { setMenuOpen(false); setTimeout(() => menuButton.current?.focus(), 0) }
+  const navigate = (destination: Destination) => {
+    if (store.active?.phase === 'holding') store.dispatch({ type: 'PAUSE', now: Date.now() })
+    setMenuOpen(false); setPage(destination); window.scrollTo({ top: 0 })
   }
+  const launch = (ids: string[], kind: SessionState['kind']) => { store.start(ids, kind); setPage('session'); window.scrollTo({ top: 0 }) }
+  const start = (ids: string[], kind: SessionState['kind']) => {
+    if (store.active && store.active.phase !== 'complete') setPendingStart({ ids, kind })
+    else launch(ids, kind)
+  }
+  const resume = () => { store.resume(); setPage('session'); window.scrollTo({ top: 0 }) }
+  const detail = store.history.find(entry => entry.id === detailId)
+  const setup = !store.profile.onboarding.completed
   return <div className="app-shell">
     <a className="skip-link" href="#main">Skip to content</a>
-    <header className="topbar"><a className="brand" href="#main" onClick={event => { event.preventDefault(); window.scrollTo({ top: 0, behavior: 'instant' }) }} aria-label="Full Stretch"><span className="brand-mark" aria-hidden="true"><MoveUpRight size={22} /></span>FULL <span>STRETCH</span></a>
-      <span className="topbar-subtitle">Mobility & flexibility</span>
-      <button ref={menuButton} className="menu-button" aria-label="Open menu" aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><MenuIcon size={18} /><span>Menu</span></button>
+    <header className="topbar"><a className="brand" href="#main" onClick={event => { event.preventDefault(); navigate('dashboard') }} aria-label="Full Stretch"><span className="brand-mark" aria-hidden="true"><MoveUpRight size={22} /></span>FULL <span>STRETCH</span></a><span className="topbar-subtitle">Mobility & flexibility</span>
+      {setup ? <span className="mini-label">Setup</span> : <button ref={menuButton} className="menu-button" aria-label="Open menu" aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><MenuIcon size={18} /><span>Menu</span></button>}
     </header>
-    {session ? <SessionPage key={session.key} ids={session.ids} kind={session.kind} pageCompleted={completed} onRegionsComplete={updateCompleted} onExit={exit} /> : <main id="main" tabIndex={-1}>
-      <div className="dashboard-heading"><div><p className="eyebrow">A moment for movement</p><h1>Make room<br />to <em>move.</em></h1></div><p>Choose a region.<br />Find your stretch.</p></div>
-      <div className="dashboard-layout"><div className="anatomy-column"><BodyMap view={view} setView={setView} selected={selected} completed={completed} onSelect={select} /></div>
-        <aside className="stretch-panel" aria-label="Selected stretch">
-          {selected && stretch ? <div className="selected-stretch"><div className="panel-kicker"><span className="eyebrow">Your focus</span><span className="mini-label">{completed.has(selected) ? <><Check size={13} /> Complete</> : 'Ready'}</span></div>
-            <h2 ref={selectionTitle} tabIndex={-1}>{regions[selected].label}</h2>
-            {choices.length > 1 ? <label className="stretch-picker">Stretch<select value={stretch.id} onChange={event => { setStretchIndex(choices.findIndex(item => item.id === event.target.value)); setGuideOpen(false) }}>{choices.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label> : <h3>{stretch.name}</h3>}
-            <p className="prescription">{prescription(stretch)}</p>
-            <button className="primary-button" ref={startButton} onClick={() => start('targeted')}>Start stretch<ArrowRight size={18} /></button>
-            <details className="preview-guide" open={guideOpen} onToggle={event => setGuideOpen(event.currentTarget.open)}><summary>How to stretch</summary><StretchGuide stretch={stretch} /></details>
-          </div> : <div className="empty-selection"><span className="empty-orbit" aria-hidden="true"><MoveUpRight size={28} /></span><h2>Where would you<br />like to start?</h2><p>Select a muscle to see its stretch.</p></div>}
-          <div className="full-body-cta"><div className="routine-line"><span className="eyebrow">From head to toe</span><span className="mini-label">12 stretches</span></div><p>{Math.round(plannedHoldSeconds(fullBodySequence()) / 60)} min hold time · Move at your pace.</p><button className="outline-button" ref={selected ? undefined : startButton} onClick={() => start('full-body')}>Start full body stretch<ArrowRight size={17} /></button></div>
-        </aside>
-      </div>
-      <section className="region-index" aria-labelledby="region-title"><div className="region-index-heading"><h2 id="region-title">Choose your region</h2><span>{completed.size} / 13 complete</span></div><div className="region-groups">{regionGroups.map(group => <div className="region-group" key={group.label}><h3>{group.label}</h3><div className="region-buttons">{group.ids.map((id, index) => <button type="button" className={`region-button ${completed.has(id) ? 'is-complete' : ''}`} key={id} aria-pressed={selected === id} aria-label={`${regions[id].label}${completed.has(id) ? ', complete' : ''}`} onClick={() => { select(id); setTimeout(() => { if (window.innerWidth < 700) selectionTitle.current?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' }); selectionTitle.current?.focus({ preventScroll: true }) }, 0) }}><span className="region-number" aria-hidden="true">{(index + 1).toString().padStart(2, '0')}</span><span>{regions[id].shortLabel ?? regions[id].label}</span>{completed.has(id) ? <Check size={15} /> : <ArrowRight size={15} aria-hidden="true" />}</button>)}</div></div>)}</div></section>
-      <p className="dashboard-note">Warm up first. Hold steady, breathe normally, and stay in a comfortable range.</p>
-    </main>}
+    {!!store.notices.length && <div className="storage-notice" role="alert"><strong>Storage notice</strong>{store.notices.map(message => <p key={message}>{message}</p>)}</div>}
+    {setup ? <Onboarding initial={store.profile} onComplete={document => { store.saveProfile(document); setPage('dashboard') }} />
+      : page === 'session' && store.active ? <SessionPage state={store.active} dispatch={store.dispatch} onExit={() => navigate('dashboard')} />
+      : page === 'progress' ? <ProgressPage history={store.history} baseline={store.profile.profile.baseline} onDetail={entry => { setDetailId(entry.id); setPage('history-detail') }} onBack={() => navigate('dashboard')} onBaseline={() => navigate('baseline')} />
+      : page === 'history-detail' && detail ? <HistoryDetail entry={detail} onBack={() => navigate('progress')} />
+      : page === 'baseline' ? <BaselinePage document={store.profile} onSave={store.saveProfile} onBack={() => navigate('dashboard')} />
+      : page === 'settings' ? <SettingsPage document={store.profile} onSave={store.saveProfile} onReset={() => { const result = store.reset(); if (result.ok) setPage('dashboard'); return result.ok }} onBack={() => navigate('dashboard')} />
+      : <Dashboard completed={completed} completeIds={completeIds} preferences={store.profile.profile.preferences} active={store.active} onStart={start} onContinue={resume} />}
     <footer className="footer"><span>FULL STRETCH</span><span>Space to move. Time to breathe.</span></footer>
-    {menuOpen && <Menu onClose={closeMenu} onDashboard={() => { closeMenu(); if (session) exit() }} />}
+    {menuOpen && <Menu onClose={closeMenu} onNavigate={navigate} />}
+    {pendingStart && <ConfirmDialog title="You have a stretch in progress." onClose={() => setPendingStart(null)}><p>Continue your current session, or discard its unfinished results and start a new one.</p><div className="confirm-actions"><button className="primary-button" onClick={() => { setPendingStart(null); resume() }}>Continue current</button><button className="outline-button" onClick={() => { const next = pendingStart; setPendingStart(null); store.discard(); launch(next.ids, next.kind) }}>Discard and start new</button></div></ConfirmDialog>}
   </div>
 }

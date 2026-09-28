@@ -21,7 +21,10 @@ export function isStretchComplete(stretch: Stretch, results: HoldResult[] = []):
   })
 }
 export function completedRegions(results: Record<string, HoldResult[]>): Set<RegionId> {
-  return new Set(stretches.filter(stretch => isStretchComplete(stretch, results[stretch.id])).flatMap(stretch => stretch.primaryRegions))
+  const complete = new Set(stretches.filter(stretch => isStretchComplete(stretch, results[stretch.id])).map(stretch => stretch.id))
+  const regions = new Set(stretches.filter(stretch => complete.has(stretch.id)).flatMap(stretch => stretch.primaryRegions))
+  if (!['straight-knee-wall-calf-stretch', 'bent-knee-wall-calf-stretch'].every(id => complete.has(id))) regions.delete('calves')
+  return regions
 }
 export const plannedHoldSeconds = (routine: readonly Stretch[]) => routine.reduce((sum, stretch) => sum + holdSequence(stretch).reduce((seconds, step) => seconds + step.seconds, 0), 0)
 export const actualHoldSeconds = (results: Record<string, HoldResult[]>) => Math.floor(Object.values(results).flat().reduce((sum, result) => sum + result.heldMs, 0) / 1000)

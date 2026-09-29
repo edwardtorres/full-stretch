@@ -10,6 +10,7 @@ type ProfilePoint = [y: number, width: number, depth: number, x?: number, z?: nu
 interface ModelProps {
   selectedMuscle: RegionId | null
   completedMuscles: ReadonlySet<RegionId>
+  coverageTones?: ReadonlyMap<RegionId, 'well' | 'less' | 'building'>
   interactive?: boolean
   onSelect: (muscle: RegionId) => void
 }
@@ -121,14 +122,15 @@ function Oval({ position, scale, color = skin, rotation = [0, 0, 0] }: { positio
   </mesh>
 }
 
-function Region({ muscle, position, scale, rotation = [0, 0, 0], outline, surface = 'front', selectedMuscle, completedMuscles, interactive = true, onSelect }: RegionProps) {
+function Region({ muscle, position, scale, rotation = [0, 0, 0], outline, surface = 'front', selectedMuscle, completedMuscles, coverageTones, interactive = true, onSelect }: RegionProps) {
   const [hovered, setHovered] = useState(false)
   useCursor(hovered && interactive, 'pointer', 'auto')
   const patch = useMemo(() => outline ? patchGeometry(outline, surface) : null, [outline, surface])
   const selected = selectedMuscle === muscle
   const completed = completedMuscles.has(muscle)
-  const tone = selected ? '#bd8953' : completed ? '#377f73' : hovered && interactive ? '#9cafa0' : '#998a76'
-  const muted = !selected && !completed && !hovered
+  const coverageTone = coverageTones?.get(muscle)
+  const tone = selected ? '#bd8953' : coverageTone === 'well' ? '#377f73' : coverageTone === 'less' ? '#b18455' : coverageTone === 'building' ? '#9a9e93' : completed ? '#377f73' : hovered && interactive ? '#9cafa0' : '#998a76'
+  const muted = !selected && !completed && !hovered && coverageTone !== 'well' && coverageTone !== 'less'
   const select = (event: ThreeEvent<MouseEvent>) => {
     if (!interactive) return
     event.stopPropagation()

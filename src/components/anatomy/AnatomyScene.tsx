@@ -20,8 +20,8 @@ function Camera({ view }: { view: BodyView }) {
   })
   return null
 }
-export default function AnatomyScene({ view, selected, completed, onSelect, interactive = true }: {
-  view: BodyView; selected: RegionId | null; completed: ReadonlySet<RegionId>; onSelect: (region: RegionId) => void; interactive?: boolean
+export default function AnatomyScene({ view, selected, completed, coverageTones, onSelect, interactive = true }: {
+  view: BodyView; selected: RegionId | null; completed: ReadonlySet<RegionId>; coverageTones?: ReadonlyMap<RegionId, 'well' | 'less' | 'building'>; onSelect: (region: RegionId) => void; interactive?: boolean
 }) {
   return <Canvas camera={{ position: [0, .1, 7.8], fov: 38, near: .1, far: 100 }} dpr={[1, 1.7]} gl={{ antialias: true, alpha: true }} fallback={<p>Use the text controls to continue.</p>} aria-label={interactive ? "3D stretch body map. Equivalent region buttons are available below." : "3D completion body map. Completed regions are also listed as text."} tabIndex={-1}>
     <ambientLight intensity={1} />
@@ -29,6 +29,6 @@ export default function AnatomyScene({ view, selected, completed, onSelect, inte
     <directionalLight position={[3, 5, 5]} intensity={2.25} color="#fff7e9" />
     <directionalLight position={[-3, 2, -4]} intensity={1.15} color="#83a9a5" />
     <Camera view={view} />
-    <AnatomyModel selectedMuscle={selected} completedMuscles={completed} onSelect={onSelect} interactive={interactive} />
+    <AnatomyModel selectedMuscle={selected} completedMuscles={completed} coverageTones={coverageTones} onSelect={onSelect} interactive={interactive} />
   </Canvas>
 }

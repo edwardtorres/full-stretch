@@ -7,14 +7,16 @@ import { validHistoryEntry, newestHistory, historicalSession, normalizeHistorica
 import { normalizeActiveSession } from './sessionValidation'
 import { validMobilitySession } from './mobility'
 import { historicalMobilitySession, validMobilityHistory } from './mobilityHistory'
+import type { WeekSnapshot } from './weekSnapshots'
+import { validWeekSnapshots } from './weekSnapshots'
 export interface StoragePort { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem(key: string): void }
-export const storageKeys = { profile: 'full-stretch:profile:v1', history: 'full-stretch:history:v1', active: 'full-stretch:active-session:v1' } as const
+export const storageKeys = { profile: 'full-stretch:profile:v1', history: 'full-stretch:history:v1', active: 'full-stretch:active-session:v1', weeks: 'full-stretch:week-snapshots:v1' } as const
 export function browserStorage(): StoragePort | null {
   try { return typeof window === 'undefined' ? null : window.localStorage } catch { return null }
 }
 export interface StorageResult<T> { value: T; issue: string | null; ok: boolean }
 type Decoded<T> = { value: T; issue?: string } | null
-function versionedRepository<T>(storage: StoragePort | null, key: string, label: string, initial: () => T, decode: (value: unknown) => Decoded<T>) {
+function versionedRepository<T>(storage: StoragePort | null, key: string, label: string, initial: () => T, decode: (value: unknown) => Decoded<T>, schema = 3) {
   let memory = initial()
   let loaded = false
   let future = false
@@ -27,11 +29,11 @@ function versionedRepository<T>(storage: StoragePort | null, key: string, label:
       const raw = storage.getItem(key)
       if (!raw) return { value: structuredClone(memory), issue: null, ok: true }
       const envelope: unknown = JSON.parse(raw)
-      if (object(envelope) && typeof envelope.schemaVersion === 'number' && envelope.schemaVersion > 3) {
+      if (object(envelope) && typeof envelope.schemaVersion === 'number' && envelope.schemaVersion > schema) {
         future = true
         readIssue = `Saved ${label} belongs to a newer app version. It has been kept; this tab will use temporary data.`
       } else {
-        const decoded = object(envelope) && [1, 2, 3].includes(envelope.schemaVersion as number) ? decode(envelope.data) : null
+        const decoded = object(envelope) && Number.isInteger(envelope.schemaVersion) && (envelope.schemaVersion as number) >= 1 && (envelope.schemaVersion as number) <= schema ? decode(envelope.data) : null
         if (!decoded) readIssue = `Saved ${label} could not be restored. You can continue with temporary data in this tab.`
         else { memory = structuredClone(decoded.value); readIssue = decoded.issue ?? null }
       }
@@ -45,7 +47,7 @@ function versionedRepository<T>(storage: StoragePort | null, key: string, label:
     try {
       if (future) throw new Error('Future version')
       if (!storage) throw new Error('Storage unavailable')
-      storage.setItem(key, JSON.stringify({ schemaVersion: 3, data: memory }))
+      storage.setItem(key, JSON.stringify({ schemaVersion: schema, data: memory }))
     } catch { issue = future ? `Saved ${label} belongs to a newer version and has been kept. Your changes are available in this tab only.` : `${label[0].toUpperCase() + label.slice(1)} could not be saved. Your changes are available in this tab only.` }
     return { value: structuredClone(memory), issue, ok: issue === null }
   }
@@ -98,9 +100,12 @@ export function historyRepository(storage: StoragePort | null) {
   }
   return { ...repository, add, finish, finishMobility }
 }
+export function weekSnapshotRepository(storage: StoragePort | null) {
+  return versionedRepository<WeekSnapshot[]>(storage, storageKeys.weeks, 'week snapshots', () => [], value => validWeekSnapshots(value) ? { value } : null, 1)
+}
 export function resetAllData(storage: StoragePort | null): { ok: boolean; issue: string | null } {
   if (!storage) return { ok: false, issue: 'Browser storage is unavailable. Data could not be removed.' }
   try { for (const key of Object.values(storageKeys)) storage.removeItem(key); return { ok: true, issue: null } }
   catch { return { ok: false, issue: 'Some Full Stretch data could not be removed. Try resetting again when browser storage is available.' } }
 }
-export const createRepositories = (storage = browserStorage()) => ({ storage, profile: profileRepository(storage), history: historyRepository(storage), active: activitySessionRepository(storage) })
+export const createRepositories = (storage = browserStorage()) => ({ storage, profile: profileRepository(storage), history: historyRepository(storage), active: activitySessionRepository(storage), weeks: weekSnapshotRepository(storage) })

@@ -40,6 +40,7 @@ export default function App() {
     document.addEventListener('visibilitychange', refresh)
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', refresh) }
   }, [])
+  useEffect(() => { store.ensureWeek() }, [day, store.profile.onboarding.completed, store.profile.profile.weeklySchedule])
   const flexibilityHistory = useMemo(() => store.history.filter(isFlexibilityHistory), [store.history])
   const mobilityHistory = useMemo(() => store.history.filter(entry => entry.activityType === 'mobility'), [store.history])
   const completed = useMemo(() => todayCoveredRegions(flexibilityHistory, new Date()), [flexibilityHistory, day])
@@ -71,11 +72,11 @@ export default function App() {
       : page === 'program-detail' ? <ProgramDetail programId={selectedProgram} preferences={store.profile.profile.preferences} onStart={programId => start({ programId })} onBack={() => navigate('programs')} />
       : page === 'mobility' ? <MobilityPage onBack={() => navigate('dashboard')} onSelect={id => { setSelectedRoutine(id); setPage('mobility-detail'); window.scrollTo({ top: 0 }) }} />
       : page === 'mobility-detail' ? <MobilityDetail routineId={selectedRoutine} onBack={() => navigate('mobility')} onStart={routineId => start({ routineId })} />
-      : page === 'progress'  ? <ProgressPage history={store.history} baseline={store.profile.profile.baseline} onDetail={entry => { setDetailId(entry.id); setPage('history-detail') }} onBack={() => navigate('dashboard')} onBaseline={() => navigate('baseline')} />
+      : page === 'progress'  ? <ProgressPage history={store.history} baseline={store.profile.profile.baseline} schedule={store.profile.profile.weeklySchedule} weeks={store.weeks} today={new Date()} onDetail={entry => { setDetailId(entry.id); setPage('history-detail') }} onBack={() => navigate('dashboard')} onBaseline={() => navigate('baseline')} />
       : page === 'history-detail' && detail ? detail.activityType === 'mobility' ? <MobilityHistoryDetail entry={detail} onBack={() => navigate('progress')} /> : <HistoryDetail entry={detail} onBack={() => navigate('progress')} />
       : page === 'baseline' ? <BaselinePage document={store.profile} onSave={store.saveProfile} onBack={() => navigate('dashboard')} />
       : page === 'settings' ? <SettingsPage document={store.profile} onSave={store.saveProfile} onReset={() => { const result = store.reset(); if (result.ok) setPage('dashboard'); return result.ok }} onBack={() => navigate('dashboard')} />
-      : <Dashboard completed={completed} completeIds={completeIds} preferences={store.profile.profile.preferences} active={store.active} onStart={ids => start({ ids })} onContinue={resume} schedule={store.profile.profile.weeklySchedule} history={flexibilityHistory} mobilityToday={mobilityToday(mobilityHistory, new Date())} today={new Date()} onPrograms={() => navigate('programs')} onStartProgram={programId => start({ programId })} />}
+      : <Dashboard completed={completed} completeIds={completeIds} preferences={store.profile.profile.preferences} active={store.active} onStart={ids => start({ ids })} onContinue={resume} schedule={store.profile.profile.weeklySchedule} history={flexibilityHistory} mobilityHistory={mobilityHistory} mobilityToday={mobilityToday(mobilityHistory, new Date())} weeks={store.weeks} today={new Date()} onPrograms={() => navigate('programs')} onStartProgram={programId => start({ programId })} />}
     <footer className="footer"><span>FULL STRETCH</span><span>Space to move. Time to breathe.</span></footer>
     {menuOpen && <Menu onClose={closeMenu} onNavigate={navigate} />}
     {pendingStart && <ConfirmDialog title="You have a session in progress." onClose={() => setPendingStart(null)}><p>Continue your current session, or discard its unfinished results and start a new one.</p><div className="confirm-actions"><button className="primary-button" onClick={() => { setPendingStart(null); resume() }}>Continue current</button><button className="outline-button" onClick={() => { const next = pendingStart; setPendingStart(null); store.discard(); launch(next) }}>Discard and start new</button></div></ConfirmDialog>}

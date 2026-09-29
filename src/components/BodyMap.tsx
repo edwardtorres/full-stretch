@@ -9,8 +9,8 @@ class BodyErrorBoundary extends Component<{ children: ReactNode }, { failed: boo
   static getDerivedStateFromError() { return { failed: true } }
   render() { return this.state.failed ? <div className="body-fallback">Body map unavailable.<span>Choose a region from the text buttons.</span></div> : this.props.children }
 }
-export function BodyMap({ view, setView, selected, completed, onSelect, interactive = true, coverageLabel = 'Completed' }: {
-  view: BodyView; setView: (view: BodyView) => void; selected: RegionId | null; completed: ReadonlySet<RegionId>; onSelect: (id: RegionId) => void; interactive?: boolean; coverageLabel?: string
+export function BodyMap({ view, setView, selected, completed, coverageTones, onSelect, interactive = true, coverageLabel = 'Completed' }: {
+  view: BodyView; setView: (view: BodyView) => void; selected: RegionId | null; completed: ReadonlySet<RegionId>; coverageTones?: ReadonlyMap<RegionId, 'well' | 'less' | 'building'>; onSelect: (id: RegionId) => void; interactive?: boolean; coverageLabel?: string
 }) {
   const container = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -23,10 +23,10 @@ export function BodyMap({ view, setView, selected, completed, onSelect, interact
     <div className="anatomy-stage" ref={container}>
       <div className="anatomy-halo" aria-hidden="true" />
       <div className="anatomy-canvas"><BodyErrorBoundary><Suspense fallback={<div className="body-fallback">Loading body map</div>}>
-        {visible ? <AnatomyScene view={view} selected={selected} completed={completed} onSelect={onSelect} interactive={interactive} /> : <div className="body-fallback">Loading body map</div>}
+        {visible ? <AnatomyScene view={view} selected={selected} completed={completed} coverageTones={coverageTones} onSelect={onSelect} interactive={interactive} /> : <div className="body-fallback">Loading body map</div>}
       </Suspense></BodyErrorBoundary></div>
       <div className="stage-annotation"><span className="mini-label">{selected ? 'Selected region' : 'Body map'}</span><strong>{selected ? regions[selected].shortLabel ?? regions[selected].label : 'Find your focus.'}</strong>
-        {selected && completed.has(selected) && <span className="completed-label"><Check size={13} /> Complete</span>}
+        {selected && (coverageTones ? <span className="completed-label">{coverageTones.get(selected) === 'well' ? 'Well Covered' : coverageTones.get(selected) === 'less' ? 'Less Covered' : 'Building Data'}</span> : completed.has(selected) && <span className="completed-label"><Check size={13} /> Complete</span>)}
         <span className="annotation-line" aria-hidden="true" />
       </div>
       <span className="view-label mini-label">{view === 'front' ? 'Anterior' : 'Posterior'}</span>

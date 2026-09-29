@@ -10,13 +10,13 @@ import { sameLocalDay, localDayKey } from './dates'
 import { regionCoverage, programRegionCoverage } from './coverage'
 export function historicalSession(state: SessionState): StretchHistoryEntry | null {
   if (state.phase !== 'complete' || !state.completedAt) return null
-  return { id: state.id, sessionType: state.kind, programId: state.programId, startedAt: state.startedAt, completedAt: state.completedAt, durationSeconds: Math.max(0, Math.floor((Date.parse(state.completedAt) - Date.parse(state.startedAt)) / 1000)), stretches: state.ids.map(id => {
+  return { activityType: 'flexibility', id: state.id, sessionType: state.kind, programId: state.programId, startedAt: state.startedAt, completedAt: state.completedAt, durationSeconds: Math.max(0, Math.floor((Date.parse(state.completedAt) - Date.parse(state.startedAt)) / 1000)), stretches: state.ids.map(id => {
     const stretch = prescribedStretch(state, id)
     return { stretchId: id, regionIds: [...stretch.primaryRegions], prescribedHoldSeconds: stretch.defaultHoldSeconds, prescribedSets: stretch.defaultSets, status: isStretchComplete(stretch, state.results[id]) ? 'completed' : 'partial', holds: (state.results[id] ?? []).map(result => ({ setNumber: result.step.set, side: result.step.side, prescribedSeconds: result.step.seconds, actualMilliseconds: result.heldMs, status: result.status })) }
   }) }
 }
 export function validHistoryEntry(value: unknown): value is StretchHistoryEntry {
-  if (!object(value) || typeof value.id !== 'string' || !value.id || !['targeted', 'program', 'full-body'].includes(value.sessionType as string) || !isoInstant(value.startedAt) || !isoInstant(value.completedAt) || Date.parse(value.completedAt) < Date.parse(value.startedAt) || !Number.isInteger(value.durationSeconds) || value.durationSeconds !== Math.floor((Date.parse(value.completedAt) - Date.parse(value.startedAt)) / 1000) || !Array.isArray(value.stretches) || !value.stretches.length || new Set(value.stretches.map(item => object(item) ? item.stretchId : null)).size !== value.stretches.length || (value.sessionType === 'targeted' && value.stretches.length !== 1)) return false
+  if (!object(value) || (value.activityType !== undefined && value.activityType !== 'flexibility') || typeof value.id !== 'string' || !value.id || !['targeted', 'program', 'full-body'].includes(value.sessionType as string) || !isoInstant(value.startedAt) || !isoInstant(value.completedAt) || Date.parse(value.completedAt) < Date.parse(value.startedAt) || !Number.isInteger(value.durationSeconds) || value.durationSeconds !== Math.floor((Date.parse(value.completedAt) - Date.parse(value.startedAt)) / 1000) || !Array.isArray(value.stretches) || !value.stretches.length || new Set(value.stretches.map(item => object(item) ? item.stretchId : null)).size !== value.stretches.length || (value.sessionType === 'targeted' && value.stretches.length !== 1)) return false
   if (value.sessionType === 'program') {
     if (!isProgramId(value.programId)) return false
     const expected = getProgram(value.programId).stretchIds
@@ -31,7 +31,7 @@ export function validHistoryEntry(value: unknown): value is StretchHistoryEntry 
     return item.holds.length === sequence.length && item.holds.every((hold, index) => object(hold) && hold.setNumber === sequence[index].set && hold.side === sequence[index].side && hold.prescribedSeconds === sequence[index].seconds && ['completed', 'skipped'].includes(hold.status as string) && typeof hold.actualMilliseconds === 'number' && Number.isFinite(hold.actualMilliseconds) && hold.actualMilliseconds >= 0 && hold.actualMilliseconds <= sequence[index].seconds * 1000 && (hold.status !== 'completed' || hold.actualMilliseconds === sequence[index].seconds * 1000)) && (item.status === 'completed') === item.holds.every(hold => object(hold) && hold.status === 'completed')
   })
 }
-export const newestHistory = (entries: StretchHistoryEntry[]) => [...entries].sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt))
+export const newestHistory = <T extends { completedAt: string }>(entries: T[]): T[] => [...entries].sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt))
 export function historyTotals(entries: StretchHistoryEntry[]) {
   const stretches = entries.flatMap(entry => entry.stretches)
   const holds = stretches.flatMap(stretch => stretch.holds)
@@ -56,7 +56,7 @@ export function todayCoveredRegions(entries: StretchHistoryEntry[], today = new 
 export function normalizeHistoricalProgram(value: unknown): StretchHistoryEntry | null {
   if (!validHistoryEntry(value)) return null
   const raw = value as unknown as Record<string, unknown>
-  return { ...value, sessionType: raw.sessionType === 'full-body' ? 'program' : value.sessionType, programId: raw.sessionType === 'full-body' ? 'full-20' : value.programId ?? null }
+  return { ...value, activityType: 'flexibility', sessionType: raw.sessionType === 'full-body' ? 'program' : value.sessionType, programId: raw.sessionType === 'full-body' ? 'full-20' : value.programId ?? null }
 }
 export type HistoryProgramFilter = 'all' | 'targeted' | ProgramId
 export const filterProgramHistory = (entries: StretchHistoryEntry[], filter: HistoryProgramFilter) => filter === 'all' ? entries : entries.filter(entry => filter === 'targeted' ? entry.sessionType === 'targeted' : entry.programId === filter)

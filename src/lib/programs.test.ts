@@ -14,6 +14,7 @@ import { historicalSession, normalizeHistoricalProgram, validHistoryEntry, today
 import { defaultSchedule, getScheduledProgramForDate, getWeeklySchedule, isScheduledProgramCompleted, weeklyCompletedCount, normalizeSchedule } from './schedule'
 import { defaultProfile, addAssessment, createAssessment, baselineAreas } from './profile'
 import { activeSessionRepository, historyRepository, profileRepository, storageKeys } from './storage'
+import { isFlexibilityHistory } from './mobilityHistory'
 import type { StoragePort } from './storage'
 import { normalizeActiveSession, validActiveSession } from './sessionValidation'
 const previousTimezone = process.env.TZ
@@ -108,7 +109,7 @@ describe('program coverage and history', () => {
     const current = record('full-20'); const { programId: _, ...legacyBase } = current
     const legacy = { ...legacyBase, sessionType: 'full-body' }; const raw = JSON.stringify({ schemaVersion: 1, data: [legacy] })
     const port = storage(); port.setItem(storageKeys.history, raw)
-    const result = historyRepository(port).load().value[0]
+    const result = historyRepository(port).load().value.filter(isFlexibilityHistory)[0]
     expect(result.programId).toBe('full-20'); expect(historySessionName(result)).toBe('Full 20'); expect(result.stretches).toEqual(legacy.stretches)
     expect(port.getItem(storageKeys.history)).toBe(raw); expect(normalizeHistoricalProgram(legacy)).toEqual(result)
   })
@@ -123,7 +124,7 @@ describe('program coverage and history', () => {
     const port = storage(); port.setItem(storageKeys.history, JSON.stringify({ schemaVersion: 1, data: [{ ...base, sessionType: 'full-body' }] }))
     const repository = historyRepository(port); repository.add(record('quick-5'))
     const entries = historyRepository(port).load().value
-    expect(entries.map(entry => entry.programId).sort()).toEqual(['full-20', 'quick-5']); expect(JSON.parse(port.getItem(storageKeys.history)!).schemaVersion).toBe(2)
+    expect(entries.filter(entry => entry.activityType === 'flexibility').map(entry => entry.programId).sort()).toEqual(['full-20', 'quick-5']); expect(JSON.parse(port.getItem(storageKeys.history)!).schemaVersion).toBe(3)
   })
   it('history remains a captured prescription after defaults change', () => {
     const old = record('quick-5'); createProgramSession('quick-5', short)
@@ -133,7 +134,7 @@ describe('program coverage and history', () => {
     const quick = record('quick-5')
     const targeted = historicalSession(finish(createSession(['supine-figure-four-stretch'], 'targeted', normal, tuesday().getTime())))!
     const port = storage(); const repository = historyRepository(port); repository.add(quick); repository.add(targeted)
-    expect(repository.load().value).toHaveLength(2); expect(todayCoveredRegions(repository.load().value, tuesday())).toEqual(new Set(['shoulders', 'lats', 'calves', 'hamstrings', 'adductors', 'glutes']))
+    expect(repository.load().value).toHaveLength(2); expect(todayCoveredRegions(repository.load().value.filter(isFlexibilityHistory), tuesday())).toEqual(new Set(['shoulders', 'lats', 'calves', 'hamstrings', 'adductors', 'glutes']))
   })
   it('aggregates complementary same-program results without counting unfinished stretches', () => {
     const first = record('full-20'); const second = structuredClone(first); second.id = 'other'

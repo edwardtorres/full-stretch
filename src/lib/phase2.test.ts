@@ -186,7 +186,7 @@ describe('repositories and reset', () => {
   })
   it('handles corrupt and future history envelopes', () => {
     const storage = memoryStorage(); storage.setItem(storageKeys.history, 'not-json'); expect(historyRepository(storage).load().value).toEqual([])
-    const raw = JSON.stringify({ schemaVersion: 3, data: [entry] }); storage.setItem(storageKeys.history, raw)
+    const raw = JSON.stringify({ schemaVersion: 4, data: [entry] }); storage.setItem(storageKeys.history, raw)
     const repository = historyRepository(storage); repository.load(); expect(repository.add(entry).ok).toBe(false); expect(storage.getItem(storageKeys.history)).toBe(raw)
   })
   it('reset removes only the three Full Stretch keys', () => {

@@ -1,9 +1,12 @@
 import type { ProfileDocument } from '../types/profile'
-import type { StretchHistoryEntry } from '../types/history'
+import type { HistoryEntry } from '../types/history'
 import type { SessionState } from './session'
+import type { MobilitySessionState } from './mobility'
 import { defaultProfile, object, normalizeProfile } from './profile'
 import { validHistoryEntry, newestHistory, historicalSession, normalizeHistoricalProgram } from './history'
 import { normalizeActiveSession } from './sessionValidation'
+import { validMobilitySession } from './mobility'
+import { historicalMobilitySession, validMobilityHistory } from './mobilityHistory'
 export interface StoragePort { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem(key: string): void }
 export const storageKeys = { profile: 'full-stretch:profile:v1', history: 'full-stretch:history:v1', active: 'full-stretch:active-session:v1' } as const
 export function browserStorage(): StoragePort | null {
@@ -24,11 +27,11 @@ function versionedRepository<T>(storage: StoragePort | null, key: string, label:
       const raw = storage.getItem(key)
       if (!raw) return { value: structuredClone(memory), issue: null, ok: true }
       const envelope: unknown = JSON.parse(raw)
-      if (object(envelope) && typeof envelope.schemaVersion === 'number' && envelope.schemaVersion > 2) {
+      if (object(envelope) && typeof envelope.schemaVersion === 'number' && envelope.schemaVersion > 3) {
         future = true
         readIssue = `Saved ${label} belongs to a newer app version. It has been kept; this tab will use temporary data.`
       } else {
-        const decoded = object(envelope) && [1, 2].includes(envelope.schemaVersion as number) ? decode(envelope.data) : null
+        const decoded = object(envelope) && [1, 2, 3].includes(envelope.schemaVersion as number) ? decode(envelope.data) : null
         if (!decoded) readIssue = `Saved ${label} could not be restored. You can continue with temporary data in this tab.`
         else { memory = structuredClone(decoded.value); readIssue = decoded.issue ?? null }
       }
@@ -42,7 +45,7 @@ function versionedRepository<T>(storage: StoragePort | null, key: string, label:
     try {
       if (future) throw new Error('Future version')
       if (!storage) throw new Error('Storage unavailable')
-      storage.setItem(key, JSON.stringify({ schemaVersion: 2, data: memory }))
+      storage.setItem(key, JSON.stringify({ schemaVersion: 3, data: memory }))
     } catch { issue = future ? `Saved ${label} belongs to a newer version and has been kept. Your changes are available in this tab only.` : `${label[0].toUpperCase() + label.slice(1)} could not be saved. Your changes are available in this tab only.` }
     return { value: structuredClone(memory), issue, ok: issue === null }
   }
@@ -63,16 +66,25 @@ export function profileRepository(storage: StoragePort | null) {
 export function activeSessionRepository(storage: StoragePort | null) {
   return versionedRepository<SessionState | null>(storage, storageKeys.active, 'active stretch', () => null, value => { const normalized = normalizeActiveSession(value); return normalized !== undefined ? { value: normalized } : null })
 }
+export type ActiveSession = SessionState | MobilitySessionState
+export function activitySessionRepository(storage: StoragePort | null) {
+  return versionedRepository<ActiveSession | null>(storage, storageKeys.active, 'active session', () => null, value => {
+    if (value === null) return { value: null }
+    if (object(value) && value.kind === 'mobility') return validMobilitySession(value) ? { value } : null
+    const normalized = normalizeActiveSession(value)
+    return normalized !== undefined ? { value: normalized } : null
+  })
+}
 export function historyRepository(storage: StoragePort | null) {
-  const repository = versionedRepository<StretchHistoryEntry[]>(storage, storageKeys.history, 'stretch history', () => [], value => {
+  const repository = versionedRepository<HistoryEntry[]>(storage, storageKeys.history, 'session history', () => [], value => {
     if (!Array.isArray(value)) return null
-    const valid = value.map(normalizeHistoricalProgram).filter((entry): entry is StretchHistoryEntry => entry !== null)
+    const valid = value.map(entry => validMobilityHistory(entry) ? entry : normalizeHistoricalProgram(entry)).filter((entry): entry is HistoryEntry => entry !== null)
     const unique = valid.filter((entry, index) => valid.findIndex(item => item.id === entry.id) === index)
     return { value: newestHistory(unique), issue: unique.length !== value.length ? 'Some saved history records could not be restored. Valid sessions have been kept.' : undefined }
   })
-  const add = (entry: StretchHistoryEntry) => {
+  const add = (entry: HistoryEntry) => {
     const existing = repository.load().value
-    if (!validHistoryEntry(entry)) return { value: existing, ok: false, issue: 'This session could not be saved as valid history.' }
+    if (!(entry.activityType === 'mobility' ? validMobilityHistory(entry) : validHistoryEntry(entry))) return { value: existing, ok: false, issue: 'This session could not be saved as valid history.' }
     // Re-saving the same ID also retries a failed storage write, without duplication.
     return repository.save(newestHistory(existing.some(item => item.id === entry.id) ? existing : [...existing, entry]))
   }
@@ -80,11 +92,15 @@ export function historyRepository(storage: StoragePort | null) {
     const entry = historicalSession(state)
     return entry ? add(entry) : { value: repository.load().value, issue: null, ok: true }
   }
-  return { ...repository, add, finish }
+  const finishMobility = (state: MobilitySessionState) => {
+    const entry = historicalMobilitySession(state)
+    return entry ? add(entry) : { value: repository.load().value, issue: null, ok: true }
+  }
+  return { ...repository, add, finish, finishMobility }
 }
 export function resetAllData(storage: StoragePort | null): { ok: boolean; issue: string | null } {
   if (!storage) return { ok: false, issue: 'Browser storage is unavailable. Data could not be removed.' }
   try { for (const key of Object.values(storageKeys)) storage.removeItem(key); return { ok: true, issue: null } }
   catch { return { ok: false, issue: 'Some Full Stretch data could not be removed. Try resetting again when browser storage is available.' } }
 }
-export const createRepositories = (storage = browserStorage()) => ({ storage, profile: profileRepository(storage), history: historyRepository(storage), active: activeSessionRepository(storage) })
+export const createRepositories = (storage = browserStorage()) => ({ storage, profile: profileRepository(storage), history: historyRepository(storage), active: activitySessionRepository(storage) })

@@ -1,0 +1,11 @@
+import { ArrowRight } from 'lucide-react'
+import type { ProgramId } from '../../types/program'
+import type { StretchPreferences } from '../../types/profile'
+import { getProgram, getProgramCoveredRegions, getProgramHoldCount, getProgramPlannedHoldTime } from '../../lib/programs'
+import { getStretch, clockText } from '../../lib/stretch'
+import { regions } from '../../data/regions'
+import { PageHeading } from '../PageHeading'
+export function ProgramDetail({ programId, preferences, onStart, onBack }: { programId: ProgramId; preferences: StretchPreferences; onStart: (id: ProgramId) => void; onBack: () => void }) {
+  const program = getProgram(programId)
+  return <main id="main" className="secondary-page program-detail"><PageHeading title={program.name} eyebrow="Program" onBack={onBack} backLabel="Back to Programs" /><p className="page-intro">{program.description}</p><div className="progress-totals"><div><b>{program.stretchIds.length}</b><span>Stretches</span></div><div><b>{getProgramHoldCount(programId, preferences)}</b><span>Holds · {preferences.holdSeconds} sec × {preferences.sets}</span></div><div><b>{clockText(getProgramPlannedHoldTime(programId, preferences))}</b><span>Planned hold time</span></div></div><button className="primary-button program-start" onClick={() => onStart(programId)}>Start program<ArrowRight size={17} /></button><p className="program-tier-note">Allow extra time for transitions. Your session keeps these settings once started.</p><h2 className="section-title">Your sequence</h2><ol className="program-sequence">{program.stretchIds.map((id, index) => { const stretch = getStretch(id); return <li key={id}><span className="mini-label" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><div><strong>{stretch.name}</strong><small>{stretch.primaryRegions.map(region => regions[region].label).join(' · ')} · {stretch.position === 'seated' ? 'Floor seated' : stretch.position}</small></div></li> })}</ol><h2 className="section-title">Program coverage</h2><ul className="program-regions">{getProgramCoveredRegions(programId).map(region => <li key={region}>{regions[region].label}</li>)}</ul>{programId !== 'full-20' && <p className="page-intro">These are the regions included in this program. Calves coverage here uses one variation; the full calf library contains two.</p>}</main>
+}

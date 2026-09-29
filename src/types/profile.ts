@@ -1,3 +1,4 @@
+import type { WeeklySchedule } from './schedule'
 import type { RegionId } from './stretch'
 export const stretchIntents = ['improve-flexibility', 'stay-consistent', 'unwind', 'complement-workouts'] as const
 export type StretchIntent = typeof stretchIntents[number]
@@ -8,6 +9,6 @@ export const perceptions = ['comfortable', 'moderately-tight', 'very-tight', 'un
 export type BaselinePerception = typeof perceptions[number]
 export interface FlexibilityBaselineResult { regionId: RegionId; perception: BaselinePerception; recordedAt: string }
 export interface BaselineAssessment { id: string; recordedAt: string; results: FlexibilityBaselineResult[] }
-export interface StretchProfile { intentions: StretchIntent[]; preferences: StretchPreferences; baseline: BaselineAssessment[] }
+export interface StretchProfile { intentions: StretchIntent[]; preferences: StretchPreferences; baseline: BaselineAssessment[]; weeklySchedule: WeeklySchedule }
 export interface StretchOnboardingState { completed: boolean }
 export interface ProfileDocument { profile: StretchProfile; onboarding: StretchOnboardingState }

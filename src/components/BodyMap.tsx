@@ -9,8 +9,8 @@ class BodyErrorBoundary extends Component<{ children: ReactNode }, { failed: boo
   static getDerivedStateFromError() { return { failed: true } }
   render() { return this.state.failed ? <div className="body-fallback">Body map unavailable.<span>Choose a region from the text buttons.</span></div> : this.props.children }
 }
-export function BodyMap({ view, setView, selected, completed, onSelect, interactive = true }: {
-  view: BodyView; setView: (view: BodyView) => void; selected: RegionId | null; completed: ReadonlySet<RegionId>; onSelect: (id: RegionId) => void; interactive?: boolean
+export function BodyMap({ view, setView, selected, completed, onSelect, interactive = true, coverageLabel = 'Completed' }: {
+  view: BodyView; setView: (view: BodyView) => void; selected: RegionId | null; completed: ReadonlySet<RegionId>; onSelect: (id: RegionId) => void; interactive?: boolean; coverageLabel?: string
 }) {
   const container = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -34,6 +34,6 @@ export function BodyMap({ view, setView, selected, completed, onSelect, interact
     <div className="body-controls"><div className="view-buttons" role="group" aria-label="Body view">
       <button type="button" aria-pressed={view === 'front'} onClick={() => setView('front')}>Front</button>
       <button type="button" aria-pressed={view === 'back'} onClick={() => setView('back')}>Back <RotateCcw size={13} aria-hidden="true" /></button>
-    </div><span className="map-legend"><span aria-hidden="true" /> <Check size={12} aria-hidden="true" /> Completed</span></div>
+    </div><span className="map-legend"><span aria-hidden="true" /> <Check size={12} aria-hidden="true" /> {coverageLabel}</span></div>
   </section>
 }

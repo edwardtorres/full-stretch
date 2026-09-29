@@ -1,3 +1,4 @@
+import { defaultSchedule, normalizeSchedule, validSchedule } from './schedule'
 import { regionIds } from '../types/stretch'
 import { holdLengths, perceptions, setCounts, stretchIntents } from '../types/profile'
 import type { BaselineAssessment, BaselinePerception, ProfileDocument, StretchPreferences } from '../types/profile'
@@ -15,7 +16,7 @@ export const baselineAreas: { id: string; label: string; regionIds: RegionId[] }
   { id: 'calves', label: 'Calves', regionIds: ['calves'] },
 ]
 export const defaultPreferences = (): StretchPreferences => ({ holdSeconds: 30, sets: 2 })
-export const defaultProfile = (): ProfileDocument => ({ profile: { intentions: ['improve-flexibility'], preferences: defaultPreferences(), baseline: [] }, onboarding: { completed: false } })
+export const defaultProfile = (): ProfileDocument => ({ profile: { intentions: ['improve-flexibility'], preferences: defaultPreferences(), baseline: [], weeklySchedule: defaultSchedule() }, onboarding: { completed: false } })
 export const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 export const isoInstant = (value: unknown): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value))
 export function validPreferences(value: unknown): value is StretchPreferences {
@@ -38,5 +39,11 @@ export function validAssessment(value: unknown): value is BaselineAssessment {
   return value.results.length === expected.length && new Set(value.results.map(result => object(result) ? result.regionId : null)).size === expected.length && value.results.every(result => object(result) && regionIds.includes(result.regionId as RegionId) && expected.includes(result.regionId as RegionId) && perceptions.includes(result.perception as BaselinePerception) && result.recordedAt === value.recordedAt)
 }
 export function validProfile(value: unknown): value is ProfileDocument {
-  return object(value) && object(value.profile) && object(value.onboarding) && typeof value.onboarding.completed === 'boolean' && Array.isArray(value.profile.intentions) && value.profile.intentions.length > 0 && new Set(value.profile.intentions).size === value.profile.intentions.length && value.profile.intentions.every(intent => stretchIntents.includes(intent as typeof stretchIntents[number])) && validPreferences(value.profile.preferences) && Array.isArray(value.profile.baseline) && value.profile.baseline.every(validAssessment) && new Set(value.profile.baseline.map(item => item.id)).size === value.profile.baseline.length
+  return object(value) && object(value.profile) && object(value.onboarding) && typeof value.onboarding.completed === 'boolean' && Array.isArray(value.profile.intentions) && value.profile.intentions.length > 0 && new Set(value.profile.intentions).size === value.profile.intentions.length && value.profile.intentions.every(intent => stretchIntents.includes(intent as typeof stretchIntents[number])) && validPreferences(value.profile.preferences) && validSchedule(value.profile.weeklySchedule) && Array.isArray(value.profile.baseline) && value.profile.baseline.every(validAssessment) && new Set(value.profile.baseline.map(item => item.id)).size === value.profile.baseline.length
+}
+
+export function normalizeProfile(value: unknown): ProfileDocument | null {
+  if (!object(value) || !object(value.profile)) return null
+  const next = { ...value, profile: { ...value.profile, weeklySchedule: normalizeSchedule(value.profile.weeklySchedule) } }
+  return validProfile(next) ? next : null
 }

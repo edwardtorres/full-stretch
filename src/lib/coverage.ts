@@ -14,4 +14,10 @@ export function regionCoverage(completeIds: ReadonlySet<string>, prescribedIds: 
     return required.length > 0 && required.every(id => completeIds.has(id))
   }))
 }
-export const coveredRegionIds = (state: SessionState) => regionCoverage(completedStretchIds(state), state.ids)
+export function programRegionCoverage(completeIds: ReadonlySet<string>, prescribedIds: readonly string[]): Set<RegionId> {
+  return new Set(regionIds.filter(region => {
+    const included = prescribedIds.filter(id => getStretch(id).primaryRegions.includes(region))
+    return included.length > 0 && included.every(id => completeIds.has(id))
+  }))
+}
+export const coveredRegionIds = (state: SessionState) => state.kind === 'program' ? programRegionCoverage(completedStretchIds(state), state.ids) : regionCoverage(completedStretchIds(state), state.ids)

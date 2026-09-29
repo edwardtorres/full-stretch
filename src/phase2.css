@@ -4,3 +4,36 @@ button:disabled{opacity:.45}.setup-page,.secondary-page{max-width:850px;margin:0
 
 /* Keep the new daily status clear of the floating anatomy. */
 .dashboard-layout{margin-top:18px}
+
+/* Phase 3: programs and weekly scheduling. */
+.program-list{border-top:1px solid var(--line)}
+.program-row{display:flex;align-items:center;gap:25px;padding:28px 0;border-bottom:1px solid var(--line);background:transparent;width:100%;text-align:left}
+.program-row:hover{background:#ebeee3}
+.program-number{font-family:ui-monospace,monospace;font-size:10px;color:var(--muted);align-self:flex-start;padding-top:8px}
+.program-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.program-row-main strong{font-size:32px;font-weight:500;letter-spacing:-.045em}
+.program-row-main>span{font-size:13px;color:var(--muted)}
+.program-row-main small,.program-row-time small{font-size:10px;color:var(--muted);line-height:1.6}
+.program-row-time{display:flex;flex-direction:column;gap:8px;text-align:right}
+.program-row-time b{font-family:ui-monospace,monospace;font-size:24px;font-weight:400;letter-spacing:-.06em}
+.program-tier-note,.calf-coverage-note{font-size:11px;color:var(--muted);line-height:1.7;margin:20px 0}
+.program-start{max-width:400px}.program-sequence{list-style:none;padding:0;border-top:1px solid var(--line)}
+.program-sequence li{display:flex;gap:23px;align-items:flex-start;padding:18px 0;border-bottom:1px solid var(--line)}
+.program-sequence li>.mini-label{padding-top:4px}.program-sequence strong{font-size:14px;font-weight:450;line-height:1.5}
+.program-sequence small{display:block;margin-top:5px;font-size:10px;color:var(--muted);text-transform:capitalize}
+.program-regions{display:flex;list-style:none;padding:0;gap:8px;flex-wrap:wrap;margin-bottom:25px}
+.program-regions li{padding:8px 12px;background:#e5eade;border-radius:20px;color:var(--teal);font-size:11px}
+.weekly-view{margin-top:45px}.weekly-heading{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.weekly-heading h2{font-size:24px;font-weight:500;letter-spacing:-.04em}.weekly-view>.muted{font-size:11px}
+.weekly-days{list-style:none;padding:0;border-top:1px solid var(--line)}
+.weekly-days li{display:grid;grid-template-columns:1fr 1fr 100px;gap:15px;padding:17px 15px;border-bottom:1px solid var(--line);align-items:center}
+.weekly-days .is-today{background:#e8ecdf;border-left:2px solid var(--teal)}
+.week-day-name{font-size:12px}.week-day-name small{display:block;font-size:9px;color:var(--muted);margin-top:6px}
+.weekly-days strong{font-size:13px;font-weight:450}.week-status{display:flex;align-items:center;justify-content:flex-end;gap:5px;font-size:10px;color:var(--teal)}
+.today-program h3{font-size:22px;font-weight:500;letter-spacing:-.04em;line-height:1.3;margin:16px 0 8px}
+.today-program-status{display:flex;align-items:center;gap:5px;color:var(--teal);font-size:10px}
+.today-program .routine-line{gap:10px;flex-wrap:wrap}.today-program .text-button{font-size:10px;margin-top:6px}
+.weekly-settings{margin-top:35px;border-top:1px solid var(--line);padding-top:20px}
+.schedule-fields{display:grid;gap:0}.schedule-fields label{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:12px 0;border-bottom:1px solid var(--line);font-size:12px}
+.schedule-fields select{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:3px;min-height:44px;padding:8px 12px;font-size:12px;width:200px;max-width:60%}
+@media(max-width:699px){.program-row{gap:13px;padding:23px 0;flex-wrap:wrap}.program-row-main strong{font-size:28px}.program-row-main>span{font-size:11px}.program-row-time{margin-left:27px;text-align:left;flex-direction:row;align-items:center;gap:15px;width:100%;order:4}.program-row-time b{font-size:21px}.program-row-time small{font-size:9px}.program-row>svg{width:17px}.program-number{font-size:9px}.program-sequence li{gap:16px}.program-sequence strong{font-size:12px}.weekly-days li{grid-template-columns:1fr 1fr 60px;padding:16px 8px;gap:8px}.weekly-days strong{font-size:12px}.week-status{font-size:9px}.weekly-heading h2{font-size:21px}.schedule-fields select{font-size:11px;padding:8px}.program-tier-note,.calf-coverage-note{font-size:10px}}

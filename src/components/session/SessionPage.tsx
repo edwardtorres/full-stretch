@@ -1,19 +1,21 @@
+import { getProgram } from '../../lib/programs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, Pause, Play, SkipForward } from 'lucide-react'
 import { BodyMap } from '../BodyMap'
 import { StretchGuide } from '../StretchGuide'
 import { regions } from '../../data/regions'
-import { actualHoldSeconds, clockText, holdSequence, isStretchComplete } from '../../lib/stretch'
-import { prescribedStretch, sessionPlanSeconds } from '../../lib/session'
+import { actualHoldSeconds, clockText, isStretchComplete } from '../../lib/stretch'
+import { prescribedStretch, sessionPlanSeconds, sessionHoldSequence } from '../../lib/session'
 import type { SessionAction, SessionState } from '../../lib/session'
 import { completedStretchIds, coveredRegionIds } from '../../lib/coverage'
 import { ConfirmDialog } from '../ConfirmDialog'
 import type { BodyView } from '../../types/stretch'
 export function SessionPage({ state, dispatch, onExit }: { state: SessionState; dispatch: (action: SessionAction) => void; onExit: () => void }) {
   const { ids, kind } = state
+  const programName = state.programId ? getProgram(state.programId).name : ''
   const stretch = prescribedStretch(state)
   const [finishConfirmation, setFinishConfirmation] = useState(false)
-  const sequence = useMemo(() => holdSequence(stretch), [stretch])
+  const sequence = sessionHoldSequence(state)
   const step = sequence[state.holdIndex]
   const completed = useMemo(() => coveredRegionIds(state), [state])
   const bodyCompleted = completed
@@ -42,27 +44,28 @@ export function SessionPage({ state, dispatch, onExit }: { state: SessionState; 
     const skipped = allResults.length - doneHolds
     const allComplete = completeCount === ids.length
     return <main id="main" className="completion-layout">
-      <section className="completion-content"><div className="completion-icon">{allComplete ? <Check size={28} /> : <ArrowRight size={28} />}</div><p className="eyebrow">{kind === 'full-body' ? 'Full body stretch' : regions[stretch.primaryRegions[0]].label}</p>
-        <h1 tabIndex={-1} ref={title}>{allComplete ? kind === 'full-body' ? 'Full body stretch complete.' : stretch.primaryRegions[0] === 'calves' ? 'Stretch complete.' : `${regions[stretch.primaryRegions[0]].label} complete.` : 'Session finished.'}</h1>
+      <section className="completion-content"><div className="completion-icon">{allComplete ? <Check size={28} /> : <ArrowRight size={28} />}</div><p className="eyebrow">{kind === 'program' ? programName : regions[stretch.primaryRegions[0]].label}</p>
+        <h1 tabIndex={-1} ref={title}>{allComplete ? kind === 'program' ? `${programName} complete.` : stretch.primaryRegions[0] === 'calves' ? 'Stretch complete.' : `${regions[stretch.primaryRegions[0]].label} complete.` : kind === 'program' ? `${programName} finished.` : 'Session finished.'}</h1>
         <p className="muted">{kind === 'targeted' ? stretch.name : `${completeCount} / ${ids.length} stretches complete`}</p>
         <div className="summary-stats"><div><b>{clockText(actualHoldSeconds(state.results))}</b><span>Hold time</span></div><div><b>{doneHolds}</b><span>Holds complete</span></div></div>
         {kind === 'targeted' && <p className="muted">{stretch.defaultSets} sets{stretch.unilateral ? ' per side' : ''} · {stretch.defaultHoldSeconds} sec each</p>}
-        {skipped > 0 && <p className="skip-summary">{skipped} {skipped === 1 ? 'hold' : 'holds'} skipped. A region is complete when all its holds are finished.</p>}
+        {skipped > 0 && <p className="skip-summary">{skipped} {skipped === 1 ? 'hold' : 'holds'} skipped. {kind === 'program' ? 'Program coverage requires all included holds for that region.' : 'A region is complete when all its holds are finished.'}</p>}
         {kind === 'targeted' && stretch.primaryRegions.includes('calves') && allComplete && <p className="muted">This calf stretch is complete. Calves coverage requires both calf variations.</p>}
-        <div className="completed-region-list" aria-label="Regions completed">{[...completed].map(id => <span key={id}><Check size={14} /> {regions[id].label}</span>)}</div>
+        {kind === 'program' && state.programId !== 'full-20' && <p className="muted">These regions are covered within {programName}. Comprehensive calf coverage uses both variations.</p>}
+        <div className="completed-region-list" aria-label={kind === 'program' ? `Regions covered in ${programName}` : 'Regions completed'}>{[...completed].map(id => <span key={id}><Check size={14} /> {regions[id].label}</span>)}</div>
         <button className="primary-button" onClick={onExit}>{kind === 'targeted' ? 'Return to body' : 'Return to dashboard'}<ArrowRight size={18} /></button>
       </section>
-      <BodyMap view={view} setView={setView} selected={null} completed={bodyCompleted} onSelect={() => {}} interactive={false} />
+      <BodyMap view={view} setView={setView} selected={null} completed={bodyCompleted} onSelect={() => {}} interactive={false} coverageLabel={kind === 'program' ? `Covered in ${programName}` : 'Completed'} />
     </main>
   }
   const phaseLabel = state.phase === 'holding' ? 'Hold' : state.phase === 'paused' ? 'Paused' : state.phase === 'ready' ? 'Ready' : lastResult?.status === 'skipped' ? 'Hold skipped' : 'Hold complete'
   return <main id="main" className="session-layout">
-    <aside className="session-anatomy"><BodyMap view={view} setView={setView} selected={stretch.primaryRegions[0]} completed={bodyCompleted} onSelect={() => {}} interactive={false} />
-      {kind === 'full-body' && <p className="body-progress"><Check size={14} /> {completeCount} / {ids.length} stretches complete</p>}
+    <aside className="session-anatomy"><BodyMap view={view} setView={setView} selected={stretch.primaryRegions[0]} completed={bodyCompleted} onSelect={() => {}} interactive={false} coverageLabel={kind === 'program' ? `Covered in ${programName}` : 'Completed'} />
+      {kind === 'program' && <p className="body-progress"><Check size={14} /> {completeCount} / {ids.length} stretches complete</p>}
     </aside>
     <section className="session-content">
-      <div className="session-top"><button className="text-button" onClick={onExit}><ArrowLeft size={16} /> Back to body</button><span className="mini-label">{kind === 'full-body' ? `Stretch ${state.stretchIndex + 1} of ${ids.length}` : 'Targeted stretch'}</span></div>
-      {kind === 'full-body' && <p className="eyebrow">Full body stretch</p>}
+      <div className="session-top"><button className="text-button" onClick={onExit}><ArrowLeft size={16} /> Back to body</button><span className="mini-label">{kind === 'program' ? `Stretch ${state.stretchIndex + 1} of ${ids.length}` : 'Targeted stretch'}</span></div>
+      {kind === 'program' && <p className="eyebrow">{programName}</p>}
       <p className="region-heading">{regions[stretch.primaryRegions[0]].label}</p><h1 ref={title} tabIndex={-1}>{stretch.name}</h1>
       <div className="hold-metadata"><span>Set {step.set} of {stretch.defaultSets}</span><strong>{step.side ? `${step.side === 'left' ? 'Left' : 'Right'} side` : 'Both sides'}</strong><span>{stretch.defaultHoldSeconds} sec</span></div>
       <div className="hold-tracker" aria-label="Prescribed holds">{sequence.map((item, index) => <span key={index} aria-current={index === state.holdIndex ? 'step' : undefined} className={results[index]?.status ?? (index === state.holdIndex ? 'current' : '')}>

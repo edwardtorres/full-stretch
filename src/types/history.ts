@@ -1,3 +1,4 @@
+import type { ProgramId } from './program'
 import type { RegionId } from './stretch'
 export interface HistoricalHold {
   setNumber: number
@@ -16,7 +17,8 @@ export interface HistoricalStretch {
 }
 export interface StretchHistoryEntry {
   id: string
-  sessionType: 'targeted' | 'full-body'
+  sessionType: 'targeted' | 'program'
+  programId: ProgramId | null
   startedAt: string
   completedAt: string
   durationSeconds: number

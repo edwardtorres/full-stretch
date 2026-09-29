@@ -1,3 +1,4 @@
+import { defaultSchedule } from './schedule'
 import { describe, expect, it } from 'vitest'
 import { fullBodyIds } from '../data/stretches'
 import type { StretchPreferences } from '../types/profile'
@@ -16,7 +17,7 @@ function memoryStorage(): StoragePort & { values: Map<string, string> } {
   const values = new Map<string, string>()
   return { values, getItem: key => values.get(key) ?? null, setItem: (key, value) => { values.set(key, value) }, removeItem: key => { values.delete(key) } }
 }
-function fullyFinish(ids = [hamstringId], kind: SessionState['kind'] = 'targeted', preferences: StretchPreferences = { holdSeconds: 30, sets: 2 }, id = 'finished-test'): SessionState {
+function fullyFinish(ids = [hamstringId], kind: Parameters<typeof createSession>[1] = 'targeted', preferences: StretchPreferences = { holdSeconds: 30, sets: 2 }, id = 'finished-test'): SessionState {
   let state = createSession(ids, kind, preferences, startTime, id)
   let now = startTime
   for (const stretchId of ids) {
@@ -34,7 +35,7 @@ const finished = fullyFinish()
 const entry = historicalSession(finished)!
 const allAnswers = Object.fromEntries(baselineAreas.map(area => [area.id, 'comfortable' as const]))
 describe('profile and baseline', () => {
-  it('defaults to flexibility, 30 sec, 2 sets and no invented baseline', () => expect(defaultProfile()).toEqual({ profile: { intentions: ['improve-flexibility'], preferences: { holdSeconds: 30, sets: 2 }, baseline: [] }, onboarding: { completed: false } }))
+  it('defaults to flexibility, 30 sec, 2 sets and no invented baseline', () => expect(defaultProfile()).toEqual({ profile: { intentions: ['improve-flexibility'], preferences: { holdSeconds: 30, sets: 2 }, baseline: [], weeklySchedule: defaultSchedule() }, onboarding: { completed: false } }))
   it.each(['improve-flexibility', 'stay-consistent', 'unwind', 'complement-workouts'] as const)('supports %s intention', intention => {
     const profile = defaultProfile(); profile.profile.intentions = [intention]; expect(validProfile(profile)).toBe(true)
   })
@@ -185,7 +186,7 @@ describe('repositories and reset', () => {
   })
   it('handles corrupt and future history envelopes', () => {
     const storage = memoryStorage(); storage.setItem(storageKeys.history, 'not-json'); expect(historyRepository(storage).load().value).toEqual([])
-    const raw = JSON.stringify({ schemaVersion: 2, data: [entry] }); storage.setItem(storageKeys.history, raw)
+    const raw = JSON.stringify({ schemaVersion: 3, data: [entry] }); storage.setItem(storageKeys.history, raw)
     const repository = historyRepository(storage); repository.load(); expect(repository.add(entry).ok).toBe(false); expect(storage.getItem(storageKeys.history)).toBe(raw)
   })
   it('reset removes only the three Full Stretch keys', () => {

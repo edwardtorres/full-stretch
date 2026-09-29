@@ -1,8 +1,9 @@
+import type { ProgramId } from '../types/program'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createRepositories, resetAllData } from '../lib/storage'
 import type { StorageResult } from '../lib/storage'
 import type { ProfileDocument } from '../types/profile'
-import { createSession, restoreSession, sessionReducer } from '../lib/session'
+import { createSession, createProgramSession, restoreSession, sessionReducer } from '../lib/session'
 import type { SessionAction, SessionState } from '../lib/session'
 export function useStretchStore() {
   const [initial] = useState(() => {
@@ -33,10 +34,11 @@ export function useStretchStore() {
   const setSession = useCallback((next: SessionState) => {
     activeRef.current = next; setActive(next); report(repositories.current.active.save(next))
   }, [report])
-  const start = (ids: string[], kind: SessionState['kind']) => {
+  const start = (ids: string[], kind: 'targeted' | 'full-body') => {
     const next = createSession(ids, kind, profile.profile.preferences)
     setSession(next)
   }
+  const startProgram = (programId: ProgramId) => setSession(createProgramSession(programId, profile.profile.preferences))
   const resume = () => { if (activeRef.current) setSession(restoreSession(activeRef.current)) }
   const dispatch = useCallback((action: SessionAction) => {
     const previous = activeRef.current
@@ -57,5 +59,5 @@ export function useStretchStore() {
     setProfile(document); setHistory([]); setActive(null); activeRef.current = null; setNotices([])
     return { value: document, ok: true, issue: null }
   }
-  return { profile, history, active, notices, saveProfile, start, resume, dispatch, discard, reset }
+  return { profile, history, active, notices, saveProfile, start, startProgram, resume, dispatch, discard, reset }
 }

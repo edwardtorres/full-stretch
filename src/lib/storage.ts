@@ -1,9 +1,9 @@
 import type { ProfileDocument } from '../types/profile'
 import type { StretchHistoryEntry } from '../types/history'
 import type { SessionState } from './session'
-import { defaultProfile, object, validProfile } from './profile'
-import { validHistoryEntry, newestHistory, historicalSession } from './history'
-import { validActiveSession } from './sessionValidation'
+import { defaultProfile, object, normalizeProfile } from './profile'
+import { validHistoryEntry, newestHistory, historicalSession, normalizeHistoricalProgram } from './history'
+import { normalizeActiveSession } from './sessionValidation'
 export interface StoragePort { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem(key: string): void }
 export const storageKeys = { profile: 'full-stretch:profile:v1', history: 'full-stretch:history:v1', active: 'full-stretch:active-session:v1' } as const
 export function browserStorage(): StoragePort | null {
@@ -24,11 +24,11 @@ function versionedRepository<T>(storage: StoragePort | null, key: string, label:
       const raw = storage.getItem(key)
       if (!raw) return { value: structuredClone(memory), issue: null, ok: true }
       const envelope: unknown = JSON.parse(raw)
-      if (object(envelope) && typeof envelope.schemaVersion === 'number' && envelope.schemaVersion > 1) {
+      if (object(envelope) && typeof envelope.schemaVersion === 'number' && envelope.schemaVersion > 2) {
         future = true
         readIssue = `Saved ${label} belongs to a newer app version. It has been kept; this tab will use temporary data.`
       } else {
-        const decoded = object(envelope) && envelope.schemaVersion === 1 ? decode(envelope.data) : null
+        const decoded = object(envelope) && [1, 2].includes(envelope.schemaVersion as number) ? decode(envelope.data) : null
         if (!decoded) readIssue = `Saved ${label} could not be restored. You can continue with temporary data in this tab.`
         else { memory = structuredClone(decoded.value); readIssue = decoded.issue ?? null }
       }
@@ -42,7 +42,7 @@ function versionedRepository<T>(storage: StoragePort | null, key: string, label:
     try {
       if (future) throw new Error('Future version')
       if (!storage) throw new Error('Storage unavailable')
-      storage.setItem(key, JSON.stringify({ schemaVersion: 1, data: memory }))
+      storage.setItem(key, JSON.stringify({ schemaVersion: 2, data: memory }))
     } catch { issue = future ? `Saved ${label} belongs to a newer version and has been kept. Your changes are available in this tab only.` : `${label[0].toUpperCase() + label.slice(1)} could not be saved. Your changes are available in this tab only.` }
     return { value: structuredClone(memory), issue, ok: issue === null }
   }
@@ -58,15 +58,15 @@ function versionedRepository<T>(storage: StoragePort | null, key: string, label:
   return { load, save, clear }
 }
 export function profileRepository(storage: StoragePort | null) {
-  return versionedRepository<ProfileDocument>(storage, storageKeys.profile, 'profile', defaultProfile, value => validProfile(value) ? { value } : null)
+  return versionedRepository<ProfileDocument>(storage, storageKeys.profile, 'profile', defaultProfile, value => { const normalized = normalizeProfile(value); return normalized ? { value: normalized } : null })
 }
 export function activeSessionRepository(storage: StoragePort | null) {
-  return versionedRepository<SessionState | null>(storage, storageKeys.active, 'active stretch', () => null, value => validActiveSession(value) ? { value } : null)
+  return versionedRepository<SessionState | null>(storage, storageKeys.active, 'active stretch', () => null, value => { const normalized = normalizeActiveSession(value); return normalized !== undefined ? { value: normalized } : null })
 }
 export function historyRepository(storage: StoragePort | null) {
   const repository = versionedRepository<StretchHistoryEntry[]>(storage, storageKeys.history, 'stretch history', () => [], value => {
     if (!Array.isArray(value)) return null
-    const valid = value.filter(validHistoryEntry)
+    const valid = value.map(normalizeHistoricalProgram).filter((entry): entry is StretchHistoryEntry => entry !== null)
     const unique = valid.filter((entry, index) => valid.findIndex(item => item.id === entry.id) === index)
     return { value: newestHistory(unique), issue: unique.length !== value.length ? 'Some saved history records could not be restored. Valid sessions have been kept.' : undefined }
   })

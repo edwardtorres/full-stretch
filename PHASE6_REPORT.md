@@ -1,9 +1,15 @@
 # Full Stretch — Phase 6 Audit Report
 
-**Phase:** Product Polish + Release Readiness  
-**Date:** September 29, 2026  
-**Project:** Full Stretch, standalone  
-**Package version:** 0.6.0 (v1 feature set; no release tag or deployment)  
+**Phase:** Product Polish + Release Readiness
+
+**Date:** September 29, 2026
+
+**Project:** Full Stretch, standalone
+
+**Package version:** 0.6.0 (v1 feature set; no release tag or deployment)
+
+**Implementation commit:** `e89ad0e`
+
 **Baseline commit:** `07cbe2e0bc5b55dc962384925636753968f53417`
 
 ## 1. What changed

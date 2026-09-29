@@ -10,14 +10,15 @@ import type { SessionAction, SessionState } from '../../lib/session'
 import { completedStretchIds, coveredRegionIds } from '../../lib/coverage'
 import { ConfirmDialog } from '../ConfirmDialog'
 import type { BodyView } from '../../types/stretch'
-export function SessionPage({ state, dispatch, onExit }: { state: SessionState; dispatch: (action: SessionAction) => void; onExit: () => void }) {
+const ignoreRegionSelection = () => {}
+export function SessionPage({ state, dispatch, onExit, earnedEvents = [] }: { state: SessionState; dispatch: (action: SessionAction) => void; onExit: () => void; earnedEvents?: string[] }) {
   const { ids, kind } = state
   const programName = state.programId ? getProgram(state.programId).name : ''
   const stretch = prescribedStretch(state)
   const [finishConfirmation, setFinishConfirmation] = useState(false)
   const sequence = sessionHoldSequence(state)
   const step = sequence[state.holdIndex]
-  const completed = useMemo(() => coveredRegionIds(state), [state])
+  const completed = useMemo(() => coveredRegionIds(state), [state.results, state.ids, state.kind, state.programId])
   const bodyCompleted = completed
   const completeCount = completedStretchIds(state).size
   const results = state.results[stretch.id] ?? []
@@ -25,6 +26,12 @@ export function SessionPage({ state, dispatch, onExit }: { state: SessionState; 
   const nextStep = sequence[state.holdIndex + 1]
   const [view, setView] = useState<BodyView>(regions[stretch.primaryRegions[0]].view)
   const title = useRef<HTMLHeadingElement>(null)
+  const actionArea = useRef<HTMLDivElement>(null)
+  const previousPhase = useRef(state.phase)
+  useEffect(() => {
+    if (previousPhase.current !== state.phase && state.phase !== 'complete' && (document.activeElement === document.body || previousPhase.current === 'holding' && ['transition', 'stretch-complete'].includes(state.phase))) actionArea.current?.querySelector<HTMLButtonElement>('.primary-button')?.focus({ preventScroll: true })
+    previousPhase.current = state.phase
+  }, [state.phase])
   useEffect(() => {
     setView(regions[stretch.primaryRegions[0]].view)
     title.current?.focus()
@@ -48,6 +55,7 @@ export function SessionPage({ state, dispatch, onExit }: { state: SessionState; 
         <h1 tabIndex={-1} ref={title}>{allComplete ? kind === 'program' ? `${programName} complete.` : stretch.primaryRegions[0] === 'calves' ? 'Stretch complete.' : `${regions[stretch.primaryRegions[0]].label} complete.` : kind === 'program' ? `${programName} finished.` : 'Session finished.'}</h1>
         <p className="muted">{kind === 'targeted' ? stretch.name : `${completeCount} / ${ids.length} stretches complete`}</p>
         <div className="summary-stats"><div><b>{clockText(actualHoldSeconds(state.results))}</b><span>Hold time</span></div><div><b>{doneHolds}</b><span>Holds complete</span></div></div>
+        {earnedEvents.length > 0 && <div className="earned-events" role="status"><strong>Earned this session</strong><ul>{earnedEvents.map(event => <li key={event}>{event}</li>)}</ul></div>}
         {kind === 'targeted' && <p className="muted">{stretch.defaultSets} sets{stretch.unilateral ? ' per side' : ''} · {stretch.defaultHoldSeconds} sec each</p>}
         {skipped > 0 && <p className="skip-summary">{skipped} {skipped === 1 ? 'hold' : 'holds'} skipped. {kind === 'program' ? 'Program coverage requires all included holds for that region.' : 'A region is complete when all its holds are finished.'}</p>}
         {kind === 'targeted' && stretch.primaryRegions.includes('calves') && allComplete && <p className="muted">This calf stretch is complete. Calves coverage requires both calf variations.</p>}
@@ -55,12 +63,12 @@ export function SessionPage({ state, dispatch, onExit }: { state: SessionState; 
         <div className="completed-region-list" aria-label={kind === 'program' ? `Regions covered in ${programName}` : 'Regions completed'}>{[...completed].map(id => <span key={id}><Check size={14} /> {regions[id].label}</span>)}</div>
         <button className="primary-button" onClick={onExit}>{kind === 'targeted' ? 'Return to body' : 'Return to dashboard'}<ArrowRight size={18} /></button>
       </section>
-      <BodyMap view={view} setView={setView} selected={null} completed={bodyCompleted} onSelect={() => {}} interactive={false} coverageLabel={kind === 'program' ? `Covered in ${programName}` : 'Completed'} />
+      <BodyMap view={view} setView={setView} selected={null} completed={bodyCompleted} onSelect={ignoreRegionSelection} interactive={false} coverageLabel={kind === 'program' ? `Covered in ${programName}` : 'Completed'} />
     </main>
   }
   const phaseLabel = state.phase === 'holding' ? 'Hold' : state.phase === 'paused' ? 'Paused' : state.phase === 'ready' ? 'Ready' : lastResult?.status === 'skipped' ? 'Hold skipped' : 'Hold complete'
   return <main id="main" className="session-layout">
-    <aside className="session-anatomy"><BodyMap view={view} setView={setView} selected={stretch.primaryRegions[0]} completed={bodyCompleted} onSelect={() => {}} interactive={false} coverageLabel={kind === 'program' ? `Covered in ${programName}` : 'Completed'} />
+    <aside className="session-anatomy"><BodyMap view={view} setView={setView} selected={stretch.primaryRegions[0]} completed={bodyCompleted} onSelect={ignoreRegionSelection} interactive={false} coverageLabel={kind === 'program' ? `Covered in ${programName}` : 'Completed'} />
       {kind === 'program' && <p className="body-progress"><Check size={14} /> {completeCount} / {ids.length} stretches complete</p>}
     </aside>
     <section className="session-content">
@@ -72,9 +80,10 @@ export function SessionPage({ state, dispatch, onExit }: { state: SessionState; 
         {results[index]?.status === 'completed' ? <Check size={12} aria-hidden="true" /> : results[index]?.status === 'skipped' ? <SkipForward size={12} aria-hidden="true" /> : <span className="hold-dot" aria-hidden="true" />}
         {item.set}{item.side ? ` ${item.side === 'left' ? 'L' : 'R'}` : ''}<span className="sr-only">{results[index]?.status ?? (index === state.holdIndex ? 'current' : 'pending')}</span>
       </span>)}</div>
+      <StretchGuide stretch={stretch} />
       <div className="timer-panel" data-phase={state.phase}><span className="mini-label">{phaseLabel}</span><div className="timer-number" role="timer" aria-live="off" aria-label={`${Math.ceil(state.remaining / 1000)} seconds remaining`}>{clockText(Math.ceil(state.remaining / 1000))}</div>
         <p>{state.phase === 'transition' ? nextStep?.side !== step.side ? `Relax, then switch to your ${nextStep?.side} side.` : 'Relax, then prepare for the next set.' : state.phase === 'stretch-complete' ? isStretchComplete(stretch, results) ? 'All holds complete. Take a breath.' : 'Stretch finished. Skipped holds are recorded separately.' : 'Strong but comfortable. Breathe normally.'}</p>
-        <div className="timer-actions">
+        <div className="timer-actions" ref={actionArea}>
           {state.phase === 'ready' && <button className="primary-button" onClick={() => dispatch({ type: 'START', now: Date.now() })}><Play size={17} /> Start hold</button>}
           {state.phase === 'holding' && <button className="primary-button" onClick={() => dispatch({ type: 'PAUSE', now: Date.now() })}><Pause size={17} /> Pause</button>}
           {state.phase === 'paused' && <button className="primary-button" onClick={() => dispatch({ type: 'RESUME', now: Date.now() })}><Play size={17} /> Resume</button>}
@@ -85,7 +94,6 @@ export function SessionPage({ state, dispatch, onExit }: { state: SessionState; 
       </div>
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announced}</p>
       {state.phase === 'transition' && nextStep && <p className="next-step">Up next · Set {nextStep.set}{nextStep.side ? ` · ${nextStep.side === 'left' ? 'Left' : 'Right'} side` : ''}</p>}
-      <StretchGuide stretch={stretch} />
       {stretch.equipment.length > 0 && <p className="equipment-label">You’ll need: {stretch.equipment.join(', ')}</p>}
       <p className="sr-only">Planned session hold time {clockText(sessionPlanSeconds(state))}</p>
       <button className="text-button finish-early-button" onClick={() => setFinishConfirmation(true)}>Finish session now</button>

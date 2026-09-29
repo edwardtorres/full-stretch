@@ -129,7 +129,8 @@ function Region({ muscle, position, scale, rotation = [0, 0, 0], outline, surfac
   const selected = selectedMuscle === muscle
   const completed = completedMuscles.has(muscle)
   const coverageTone = coverageTones?.get(muscle)
-  const tone = selected ? '#bd8953' : coverageTone === 'well' ? '#377f73' : coverageTone === 'less' ? '#b18455' : coverageTone === 'building' ? '#9a9e93' : completed ? '#377f73' : hovered && interactive ? '#9cafa0' : '#998a76'
+  // Coverage keeps its classification color even when selected; text names the selection.
+  const tone = selected && !coverageTone ? '#bd8953' : coverageTone === 'well' ? '#377f73' : coverageTone === 'less' ? '#b18455' : coverageTone === 'building' ? '#9a9e93' : completed ? '#377f73' : hovered && interactive ? '#9cafa0' : '#998a76'
   const muted = !selected && !completed && !hovered && coverageTone !== 'well' && coverageTone !== 'less'
   const select = (event: ThreeEvent<MouseEvent>) => {
     if (!interactive) return
@@ -138,7 +139,7 @@ function Region({ muscle, position, scale, rotation = [0, 0, 0], outline, surfac
   }
   return <mesh position={position} scale={scale} rotation={rotation} onClick={select} onPointerOver={(event) => { if (interactive) { event.stopPropagation(); setHovered(true) } }} onPointerOut={() => setHovered(false)} castShadow>
     {patch ? <primitive object={patch} attach="geometry" /> : <sphereGeometry args={[1, 36, 28]} />}
-    <meshStandardMaterial color={tone} roughness={0.83} metalness={0.02} side={2} transparent={muted} opacity={muted ? 0.5 : 1} emissive={muted ? '#000000' : tone} emissiveIntensity={muted ? 0 : 0.08} />
+    <meshStandardMaterial color={tone} roughness={0.83} metalness={0.02} side={2} transparent={muted} opacity={muted ? 0.5 : 1} emissive={muted ? '#000000' : tone} emissiveIntensity={muted ? 0 : selected && coverageTone ? 0.16 : 0.08} />
   </mesh>
 }
 

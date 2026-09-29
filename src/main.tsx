@@ -5,3 +5,5 @@ import './styles.css'
 import './phase2.css'
 import './phase5.css'
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)
+
+import './polish.css'

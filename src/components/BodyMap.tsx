@@ -34,6 +34,6 @@ export function BodyMap({ view, setView, selected, completed, coverageTones, onS
     <div className="body-controls"><div className="view-buttons" role="group" aria-label="Body view">
       <button type="button" aria-pressed={view === 'front'} onClick={() => setView('front')}>Front</button>
       <button type="button" aria-pressed={view === 'back'} onClick={() => setView('back')}>Back <RotateCcw size={13} aria-hidden="true" /></button>
-    </div><span className="map-legend"><span aria-hidden="true" /> <Check size={12} aria-hidden="true" /> {coverageLabel}</span></div>
+    </div></div><div className="map-legend" aria-label={coverageLabel}>{(coverageTones ? ['Well Covered', 'Less Covered', 'Building Data'] : ['Selected', 'Completed', 'Not completed']).map((label, index) => <span key={label} className={`legend-state legend-${coverageTones ? 'coverage' : 'today'}-${index}`}><i aria-hidden="true" />{label}</span>)}</div><div className="sr-only">{coverageLabel}</div>
   </section>
 }

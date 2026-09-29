@@ -38,7 +38,7 @@ export function StretchGuide({ stretch }: { stretch: Stretch }) {
   const pair = poses[stretch.id]
   return <div className="stretch-guide">
     {pair && <div className="guide-frames">{pair.map((pose, index) => <figure key={index}><Figure pose={pose} id={stretch.id} label={`${stretch.name}: ${index === 0 ? 'set up' : 'hold'} position diagram`} /><figcaption>{index === 0 ? 'Set up' : 'Hold'}</figcaption></figure>)}<span aria-hidden="true" className="guide-arrow">→</span></div>}
-    <div className="guide-cues"><div><h3>Set up</h3>{stretch.setupCues.map(cue => <p key={cue}>{cue}</p>)}</div><div><h3>Stretch</h3>{stretch.stretchCues.map(cue => <p key={cue}>{cue}</p>)}</div></div>
+    <div className="guide-cues"><div><h2>Set up</h2>{stretch.setupCues.map(cue => <p key={cue}>{cue}</p>)}</div><div><h2>Stretch</h2>{stretch.stretchCues.map(cue => <p key={cue}>{cue}</p>)}</div></div>
     <p className="safety-cue">{stretch.safetyCue} Do not force the position or push through sharp pain.</p>
   </div>
 }

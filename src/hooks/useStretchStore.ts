@@ -42,7 +42,7 @@ export function useStretchStore() {
     if (updated !== current) { const result = repositories.current.weeks.save(updated); setWeeks(result.value); report(result) }
   }
   const ensureWeek = () => { if (profile.onboarding.completed) saveWeek(profile.profile.weeklySchedule) }
-  const saveProfile = (next: ProfileDocument) => { setProfile(next); report(repositories.current.profile.save(next)); if (next.onboarding.completed) saveWeek(next.profile.weeklySchedule) }
+  const saveProfile = (next: ProfileDocument) => { setProfile(next); const result = repositories.current.profile.save(next); report(result); if (next.onboarding.completed) saveWeek(next.profile.weeklySchedule); return result.ok }
   const setSession = useCallback((next: ActiveSession) => {
     activeRef.current = next; setActive(next); report(repositories.current.active.save(next))
   }, [report])

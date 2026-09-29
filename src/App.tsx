@@ -21,6 +21,7 @@ import { HistoryDetail } from './components/progress/HistoryDetail'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { useStretchStore } from './hooks/useStretchStore'
 import { todayCompletedStretchIds, todayCoveredRegions } from './lib/history'
+import { sessionEarnedEvents } from './lib/presentation'
 import { localDayKey } from './lib/dates'
 import { startRequiresResolution } from './lib/sessionLaunch'
 type SessionRequest = { ids: string[] } | { programId: ProgramId } | { routineId: MobilityRoutineId }
@@ -58,6 +59,7 @@ export default function App() {
   }
   const resume = () => { store.resume(); setPage(store.active?.kind === 'mobility' ? 'mobility-session' : 'session'); window.scrollTo({ top: 0 }) }
   const detail = store.history.find(entry => entry.id === detailId)
+  const earnedEvents = store.active?.phase === 'complete' ? sessionEarnedEvents(store.history, store.active.id, store.profile.profile.baseline, store.weeks, new Date()) : []
   const setup = !store.profile.onboarding.completed
   return <div className="app-shell">
     <a className="skip-link" href="#main">Skip to content</a>
@@ -66,8 +68,8 @@ export default function App() {
     </header>
     {!!store.notices.length && <div className="storage-notice" role="alert"><strong>Storage notice</strong>{store.notices.map(message => <p key={message}>{message}</p>)}</div>}
     {setup ? <Onboarding initial={store.profile} onComplete={document => { store.saveProfile(document); setPage('dashboard') }} />
-      : page === 'session' && store.active && store.active.kind !== 'mobility' ? <SessionPage state={store.active} dispatch={store.dispatch} onExit={() => navigate('dashboard')} />
-      : page === 'mobility-session' && store.active?.kind === 'mobility' ? <MobilitySessionPage state={store.active} dispatch={store.dispatchMobility} onExit={() => navigate('mobility')} />
+      : page === 'session' && store.active && store.active.kind !== 'mobility' ? <SessionPage earnedEvents={earnedEvents} state={store.active} dispatch={store.dispatch} onExit={() => navigate('dashboard')} />
+      : page === 'mobility-session' && store.active?.kind === 'mobility' ? <MobilitySessionPage earnedEvents={earnedEvents} state={store.active} dispatch={store.dispatchMobility} onExit={() => navigate('mobility')} />
       : page === 'programs' ? <ProgramsPage preferences={store.profile.profile.preferences} schedule={store.profile.profile.weeklySchedule} history={flexibilityHistory} today={new Date()} onSelect={id => { setSelectedProgram(id); setPage('program-detail'); window.scrollTo({ top: 0 }) }} onBack={() => navigate('dashboard')} onSettings={() => navigate('settings')} />
       : page === 'program-detail' ? <ProgramDetail programId={selectedProgram} preferences={store.profile.profile.preferences} onStart={programId => start({ programId })} onBack={() => navigate('programs')} />
       : page === 'mobility' ? <MobilityPage onBack={() => navigate('dashboard')} onSelect={id => { setSelectedRoutine(id); setPage('mobility-detail'); window.scrollTo({ top: 0 }) }} />

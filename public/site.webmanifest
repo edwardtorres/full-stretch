@@ -1,0 +1,13 @@
+{
+  "name": "Full Stretch",
+  "short_name": "Full Stretch",
+  "description": "Flexibility & Mobility Tracker",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#f4f2eb",
+  "theme_color": "#f4f2eb",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}

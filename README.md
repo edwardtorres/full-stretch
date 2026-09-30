@@ -1,6 +1,12 @@
 # Full Stretch
 
-A standalone, local-first app for guided static stretching and dynamic warm-ups, with an interactive 3D body map and insights from your recorded activity. The v1 feature set is complete; hosting and deployment are separate next steps.
+A standalone, local-first app for guided static stretching and dynamic warm-ups, with an interactive 3D body map and insights from your recorded activity. Released as **v1.0.0** on September 29, 2026.
+
+## Live App
+
+[fullstretch.edwardtorres.dev](https://fullstretch.edwardtorres.dev/)
+
+Source: [edwardtorres/full-stretch](https://github.com/edwardtorres/full-stretch)
 
 ## Features
 
@@ -37,7 +43,7 @@ Calves have two library variations. Targeted comprehensive calf coverage require
 
 ## Tech Stack
 
-React 19, TypeScript, Vite, Three.js, React Three Fiber, Drei, Lucide icons, and Vitest. The procedural anatomy is loaded in a separate lazy chunk. The timer engines and analytics are pure TypeScript modules.
+React 19, TypeScript, Vite, Three.js, React Three Fiber, Drei, Lucide icons, Vitest, and Cloudflare Workers Static Assets. The procedural anatomy is loaded in a separate lazy chunk. The timer engines and analytics are pure TypeScript modules.
 
 ## Local Development
 
@@ -82,3 +88,24 @@ Move through a comfortable range. Stop if you experience sharp or unusual pain.
 ## Project Structure
 
 `src/data/` contains the canonical libraries. `src/lib/` contains timer engines, validation, repositories, and derived analytics. `src/hooks/useStretchStore.ts` coordinates persistence. `src/components/` contains the pages and lazy anatomy. Historical `PHASE*_REPORT.md` files document each development phase.
+
+## Release
+
+**v1.0.0** — September 29, 2026. See [RELEASE_V1.md](RELEASE_V1.md), [PHASE7_REPORT.md](PHASE7_REPORT.md), and [PORTFOLIO_HANDOFF.md](PORTFOLIO_HANDOFF.md).
+
+### Deployment
+
+```sh
+npm ci
+npm test
+npm run typecheck
+npm run deploy
+```
+
+Authenticate Wrangler to the authorized Cloudflare account before deploying. `npm run deploy` builds and uploads static assets; `wrangler.jsonc` targets only `fullstretch.edwardtorres.dev`. No handwritten Worker runtime, API, database, bindings, or server-held activity data. Navigation uses React state under `/`; unknown paths are not given a new SPA fallback. `workers.dev` and preview URLs are disabled.
+
+HTML and unversioned artwork revalidate. Vite's hashed `/assets/*` files use one-year immutable caching. A minimal manifest supplies identity/icons only: no service worker or offline cache. The app-level error boundary offers Reload app; body-map fallback and storage notices remain independent.
+
+`npm run assets` regenerates the favicon and 1200×630 social card using macOS Swift/AppKit. Generated public artwork is committed; Node, `dist/`, credentials, and QA output are not. Artwork generation is not required for an ordinary build or deployment.
+
+The HTTPS URL is the canonical link. HTTP currently serves the page rather than redirecting; no shared Cloudflare zone settings were changed.

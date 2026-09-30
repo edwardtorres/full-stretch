@@ -6,11 +6,11 @@
 
 **Production:** [fullstretch.edwardtorres.dev](https://fullstretch.edwardtorres.dev/)
 
-**Repository target:** [edwardtorres/full-stretch](https://github.com/edwardtorres/full-stretch)
+**Repository:** [edwardtorres/full-stretch](https://github.com/edwardtorres/full-stretch)
 
 ## 1. Release result
 
-Production deployment and application release gates pass. The final bundle is live over trusted HTTPS. GitHub publication is the final source-control step, recorded in section 24 after verification. Feature development remained frozen: release metadata, assets, hosting, render recovery, documentation, and one measured modal sizing fix only.
+**Released and published.** Production deployment and application release gates pass. The final bundle is live over trusted HTTPS, and the source repository is public with preserved history. GitHub/source-control verification is recorded in section 24. Feature development remained frozen: release metadata, assets, hosting, render recovery, documentation, and one measured modal sizing fix only.
 
 Before editing, reviewed README, Phase 5/6 reports, package/lockfile, Vite config, all public assets, application navigation/components, profile/history/active/week repositories, Git ignore/status/history, and authentication. The original tree was clean on `main`, version 0.6.0, no remote. Pre-release HEAD: **`d7d3821d981287978193b74a52d2de25cd8ef59c`** (`docs: finalize Phase 6 audit report`).
 
@@ -195,7 +195,11 @@ Baseline comparison: metadata adds about 0.32 kB gzip HTML; main adds 0.16, CSS 
 
 ## 24. Git/GitHub status
 
-Pending final release commit/publication verification. Existing main history is preserved; no remote README initialization, force push, or history rewrite. Intended public repository: `edwardtorres/full-stretch`, homepage the HTTPS app, requested description. Release source excludes dependencies, builds, env/credentials, Wrangler state, logs, OS artifacts, and temporary QA output. GitHub CLI authentication is valid for `edwardtorres`.
+**Published PUBLIC:** [edwardtorres/full-stretch](https://github.com/edwardtorres/full-stretch). Requested description and HTTPS homepage verified. Default branch is `main`; it tracks `origin/main`. Fetch/push remote: `https://github.com/edwardtorres/full-stretch.git`. Working tree clean and divergence **0 ahead / 0 behind** after publication; final documentation update is committed and pushed independently.
+
+Release commit: **`0b5756314d8329fcb9ace417f2d3e572ca1837f2`** (`release: Full Stretch v1.0.0`). Annotated **`v1.0.0`** tag is pushed and points to this commit. Existing eight prior commits are preserved. The subsequent documentation commit records completed publication; the release tag is not moved. No remote README initialization, force push, amend, or history rewrite.
+
+Topics: react, typescript, threejs, react-three-fiber, vite, fitness, stretching, mobility. Public GitHub page loads and README renders with prominent working Live App and Source links. Tracked-file/history scan found no obvious credentials, env files, dependency folders, build output, local Wrangler state, or temporary QA artifacts. Static definitions and legitimate unit-test fixtures are expected. GitHub CLI authenticated as `edwardtorres`.
 
 ## 25. README/release docs
 

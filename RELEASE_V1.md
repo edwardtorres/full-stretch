@@ -6,6 +6,10 @@
 
 **Source:** [edwardtorres/full-stretch](https://github.com/edwardtorres/full-stretch)
 
+**Release commit:** `0b5756314d8329fcb9ace417f2d3e572ca1837f2`
+
+**Tag:** `v1.0.0` (annotated, published)
+
 ## Product
 
 A standalone 3D flexibility and mobility tracker. Choose a body region, follow static stretching guidance or a dynamic warm-up, and review your recorded activity. v1 preserves the Phase 6 feature set; this release adds hosting, metadata, artwork, render recovery, documentation, and a confirmation-button sizing fix.
